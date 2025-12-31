@@ -1119,12 +1119,12 @@
             
             const traces = [];
             
-            // Color scheme: Primary = brighter, Secondary = dimmer/different hue
+            // Color scheme: Primary (G19) vs Secondary (G18) - completely different colors
             const colors = {
-                Hp: { primary: '#ff69b4', secondary: '#b4467d' },      // Hot pink / Muted pink
-                He: { primary: '#87ceeb', secondary: '#5a8fa3' },      // Sky blue / Muted blue
-                Hn: { primary: '#98fb98', secondary: '#6ab06a' },      // Pale green / Muted green
-                total: { primary: '#ffd700', secondary: '#b39700' },   // Gold / Darker gold
+                Hp: { primary: '#ff69b4', secondary: '#00bcd4' },      // Hot pink / Cyan
+                He: { primary: '#87ceeb', secondary: '#ff9800' },      // Sky blue / Orange
+                Hn: { primary: '#98fb98', secondary: '#e91e63' },      // Pale green / Magenta
+                total: { primary: '#ffd700', secondary: '#9c27b0' },   // Gold / Purple
             };
             
             // Primary satellite traces (solid, brighter)
