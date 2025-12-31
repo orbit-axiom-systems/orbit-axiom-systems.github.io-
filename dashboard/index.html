@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Weather Dashboard | Orbit Axiom Systems</title>
+    <meta name="description" content="Real-time space weather monitoring - Solar wind, geomagnetic conditions, and solar surface analysis.">
+    
+    <!-- Plotly for interactive charts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <!-- Fonts (same as main site) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #4a9eff;
+            --accent-dim: #2a5a9a;
+            --border: #2a2a35;
+            --success: #00ff88;
+            --warning: #ffcc00;
+            --danger: #ff6b6b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Instrument Sans', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* Navigation - matches main site */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 1.5rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .logo {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+        
+        .nav-links .active {
+            color: var(--accent);
+        }
+        
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(0, 255, 136, 0); }
+        }
+        
+        /* Main content */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 100px 2rem 2rem;
+        }
+        
+        /* Header */
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        .last-update {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+        
+        /* Current conditions cards */
+        .conditions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .condition-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        
+        .condition-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-dim);
+        }
+        
+        .condition-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .condition-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .condition-unit {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .value-normal { color: var(--success); }
+        .value-elevated { color: var(--warning); }
+        .value-high { color: var(--danger); }
+        
+        /* Main grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Panels */
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .panel-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        
+        .panel-content {
+            padding: 1rem;
+        }
+        
+        .chart-container {
+            height: 350px;
+            width: 100%;
+        }
+        
+        /* Controls row */
+        .panel-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Time selector */
+        .time-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .time-btn {
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-family: 'Space Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .time-btn:hover {
+            border-color: var(--text-muted);
+        }
+        
+        .time-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+        
+        /* Component toggles */
+        .toggle-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .toggle-label input {
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        
+        .toggle-label .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        /* SDO Panel - full width */
+        .sdo-panel {
+            grid-column: span 2;
+        }
+        
+        @media (max-width: 1200px) {
+            .sdo-panel {
+                grid-column: span 1;
+            }
+        }
+        
+        .sdo-content {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+        
+        @media (max-width: 900px) {
+            .sdo-content {
+                flex-direction: column;
+            }
+        }
+        
+        .sdo-image-wrapper {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .sdo-image-wrapper img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .sdo-stats {
+            width: 200px;
+            flex-shrink: 0;
+        }
+        
+        .sdo-stat {
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            text-align: center;
+        }
+        
+        .sdo-stat-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .sdo-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        
+        /* Alerts panel */
+        .alerts-panel {
+            grid-column: span 2;
+        }
+        
+        @media (max-width: 1200px) {
+            .alerts-panel {
+                grid-column: span 1;
+            }
+        }
+        
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 107, 107, 0.1);
+            border-left: 3px solid var(--danger);
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 0.75rem;
+        }
+        
+        .alert-item.shock {
+            background: rgba(255, 204, 0, 0.1);
+            border-left-color: var(--warning);
+        }
+        
+        .alert-icon {
+            font-size: 1.5rem;
+        }
+        
+        .alert-content {
+            flex: 1;
+        }
+        
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .alert-details {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .no-alerts {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+        
+        /* Loading state */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--text-muted);
+        }
+        
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Footer */
+        footer {
+            margin-top: 3rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Satellite indicator */
+        .sat-indicator {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            margin-left: 0.5rem;
+        }
+        
+        .sat-primary {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success);
+        }
+        
+        .sat-secondary {
+            background: rgba(255, 204, 0, 0.2);
+            color: var(--warning);
+        }
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem 1.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .container {
+                padding: 80px 1rem 1rem;
+            }
+            
+            .conditions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .condition-value {
+                font-size: 1.5rem;
+            }
+            
+            .sdo-stats {
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+            
+            .sdo-stat {
+                margin-bottom: 0;
+            }
+            
+            .panel-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="/" class="logo">ORBIT AXIOM SYSTEMS</a>
+        <ul class="nav-links">
+            <li><a href="/#problem">Problem</a></li>
+            <li><a href="/#solution">Orion Grid</a></li>
+            <li><a href="/#technology">Technology</a></li>
+            <li><a href="/dashboard" class="active">Dashboard</a></li>
+            <li><a href="/#contact">Contact</a></li>
+            <li>
+                <span class="status-badge">
+                    <span class="status-dot"></span>
+                    Live
+                </span>
+            </li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1 class="page-title">Space Weather Dashboard</h1>
+            <p class="page-subtitle">Real-time monitoring from Sun to Earth</p>
+            <p class="last-update" id="lastUpdate">Loading...</p>
+        </div>
+        
+        <!-- Current Conditions -->
+        <div class="conditions-grid">
+            <div class="condition-card">
+                <div class="condition-label">Solar Wind Speed</div>
+                <div class="condition-value" id="speedValue">--</div>
+                <div class="condition-unit">km/s</div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-label">Proton Density</div>
+                <div class="condition-value" id="densityValue">--</div>
+                <div class="condition-unit">p/cm³</div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-label">IMF Bt</div>
+                <div class="condition-value" id="btValue">--</div>
+                <div class="condition-unit">nT</div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-label">IMF Bz</div>
+                <div class="condition-value" id="bzValue">--</div>
+                <div class="condition-unit">nT</div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-label">GOES Hp</div>
+                <div class="condition-value" id="hpValue">--</div>
+                <div class="condition-unit">nT</div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-label">Coronal Holes</div>
+                <div class="condition-value value-normal" id="chValue">--</div>
+                <div class="condition-unit">detected</div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-label">Active Regions</div>
+                <div class="condition-value value-elevated" id="arValue">--</div>
+                <div class="condition-unit">detected</div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- L1 Solar Wind -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">☀️ L1 Solar Wind</div>
+                        <div class="panel-subtitle">DSCOVR / ACE at Lagrange Point 1</div>
+                    </div>
+                    <div class="time-selector" id="l1TimeSelector">
+                        <button class="time-btn" data-hours="6">6H</button>
+                        <button class="time-btn active" data-hours="24">24H</button>
+                        <button class="time-btn" data-hours="72">3D</button>
+                        <button class="time-btn" data-hours="168">7D</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div id="l1Chart" class="chart-container">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Loading L1 data...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- GOES Magnetometer -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">
+                            🛰️ GOES Magnetometer
+                            <span class="sat-indicator sat-primary" id="primarySat">G--</span>
+                            <span class="sat-indicator sat-secondary" id="secondarySat">G--</span>
+                        </div>
+                        <div class="panel-subtitle">Geostationary Hp Component</div>
+                    </div>
+                    <div class="panel-controls">
+                        <div class="time-selector" id="goesTimeSelector">
+                            <button class="time-btn active" data-hours="6">6H</button>
+                            <button class="time-btn" data-hours="24">24H</button>
+                            <button class="time-btn" data-hours="72">3D</button>
+                            <button class="time-btn" data-hours="168">7D</button>
+                        </div>
+                        <div class="toggle-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="toggleHp" checked>
+                                <span class="color-dot" style="background: #ff69b4;"></span>
+                                Hp
+                            </label>
+                            <label class="toggle-label">
+                                <input type="checkbox" id="toggleHe">
+                                <span class="color-dot" style="background: #87ceeb;"></span>
+                                He
+                            </label>
+                            <label class="toggle-label">
+                                <input type="checkbox" id="toggleHn">
+                                <span class="color-dot" style="background: #98fb98;"></span>
+                                Hn
+                            </label>
+                            <label class="toggle-label">
+                                <input type="checkbox" id="toggleTotal" checked>
+                                <span class="color-dot" style="background: #ffd700;"></span>
+                                Total
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div id="goesChart" class="chart-container">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Loading GOES data...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SDO Solar Monitor -->
+            <div class="panel sdo-panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">🌞 Solar Disk Monitor</div>
+                        <div class="panel-subtitle">SDO AIA/HMI - Coronal Holes & Active Regions</div>
+                    </div>
+                    <span class="last-update" id="sdoUpdate">--</span>
+                </div>
+                <div class="panel-content">
+                    <div class="sdo-content">
+                        <div class="sdo-image-wrapper">
+                            <img id="sdoImage" src="data/sdo_dashboard.jpg" alt="SDO Solar Dashboard" 
+                                 onerror="this.src='https://via.placeholder.com/800x400/1a1a24/606070?text=SDO+Image+Loading...'">
+                        </div>
+                        <div class="sdo-stats">
+                            <div class="sdo-stat">
+                                <div class="sdo-stat-value" id="chCount">--</div>
+                                <div class="sdo-stat-label">Coronal Holes</div>
+                            </div>
+                            <div class="sdo-stat">
+                                <div class="sdo-stat-value" id="arCount">--</div>
+                                <div class="sdo-stat-label">Active Regions</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Event Detections -->
+            <div class="panel alerts-panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">⚡ Event Detections</div>
+                        <div class="panel-subtitle">IP Shocks & Storm Sudden Commencements</div>
+                    </div>
+                </div>
+                <div class="panel-content" id="alertsContainer">
+                    <div class="no-alerts">No significant events detected recently</div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Data: <a href="https://www.swpc.noaa.gov/" target="_blank">NOAA SWPC</a> | 
+               <a href="https://sdo.gsfc.nasa.gov/" target="_blank">NASA SDO</a> | 
+               <a href="https://jsoc.stanford.edu/" target="_blank">Stanford JSOC</a></p>
+            <p style="margin-top: 0.5rem;">Processing & Detection: Orbit Axiom Systems</p>
+        </footer>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            // Data from our own repo (updated by Cloud Functions)
+            sdoImageUrl: 'data/sdo_dashboard.jpg',
+            sdoMetadataUrl: 'data/sdo_metadata.json',
+            spaceWeatherUrl: 'data/space_weather.json',
+            
+            // NOAA SWPC direct endpoints for time series
+            noaaPlasmaUrl: 'https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json',
+            noaaMagUrl: 'https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json',
+            noaaInstrumentUrl: 'https://services.swpc.noaa.gov/json/goes/instrument-sources.json',
+            
+            refreshInterval: 60000, // 1 minute
+        };
+        
+        // GOES data URLs (will be set after fetching instrument sources)
+        let goesUrls = {
+            primary: null,
+            secondary: null,
+            primarySat: null,
+            secondarySat: null,
+        };
+        
+        // Plotly layout for dark theme
+        const darkLayout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(26,26,36,0.5)',
+            font: { color: '#a0a0b0', size: 11, family: 'Instrument Sans' },
+            margin: { l: 50, r: 20, t: 10, b: 40 },
+            xaxis: {
+                gridcolor: 'rgba(255,255,255,0.05)',
+                linecolor: 'rgba(255,255,255,0.1)',
+                tickformat: '%m/%d %H:%M',
+            },
+            yaxis: {
+                gridcolor: 'rgba(255,255,255,0.05)',
+                linecolor: 'rgba(255,255,255,0.1)',
+            },
+            showlegend: true,
+            legend: {
+                orientation: 'h',
+                y: 1.15,
+                x: 0.5,
+                xanchor: 'center',
+                font: { size: 10 }
+            },
+            hovermode: 'x unified',
+        };
+        
+        const plotConfig = {
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+            displaylogo: false,
+        };
+        
+        // State
+        let l1Hours = 24;
+        let goesHours = 6;
+        let plasmaData = [];
+        let magData = [];
+        let goesPrimaryData = [];
+        let goesSecondaryData = [];
+        
+        // Component visibility
+        let showComponents = {
+            Hp: true,
+            He: false,
+            Hn: false,
+            total: true,
+        };
+        
+        // Fetch GOES instrument sources to determine primary/secondary
+        async function fetchGoesInstruments() {
+            try {
+                const response = await fetch(CONFIG.noaaInstrumentUrl);
+                const data = await response.json();
+                const latest = data[0];
+                
+                const primarySat = latest.magnetometers.primary;
+                const secondarySat = latest.magnetometers.secondary;
+                
+                goesUrls.primarySat = primarySat;
+                goesUrls.secondarySat = secondarySat;
+                goesUrls.primary = `https://services.swpc.noaa.gov/json/goes/primary/magnetometers-7-day.json`;
+                goesUrls.secondary = `https://services.swpc.noaa.gov/json/goes/secondary/magnetometers-7-day.json`;
+                
+                // Update UI
+                document.getElementById('primarySat').textContent = `G${primarySat} (P)`;
+                document.getElementById('secondarySat').textContent = `G${secondarySat} (S)`;
+                
+                return { primary: primarySat, secondary: secondarySat };
+            } catch (error) {
+                console.error('Error fetching GOES instruments:', error);
+                // Fallback
+                goesUrls.primary = 'https://services.swpc.noaa.gov/json/goes/primary/magnetometers-7-day.json';
+                goesUrls.secondary = 'https://services.swpc.noaa.gov/json/goes/secondary/magnetometers-7-day.json';
+                return null;
+            }
+        }
+        
+        // Fetch functions
+        async function fetchPlasmaData() {
+            try {
+                const response = await fetch(CONFIG.noaaPlasmaUrl);
+                const data = await response.json();
+                plasmaData = data.slice(1).map(row => ({
+                    time: new Date(row[0]),
+                    density: parseFloat(row[1]),
+                    speed: parseFloat(row[2]),
+                    temperature: parseFloat(row[3]),
+                })).filter(d => !isNaN(d.speed) && d.speed > 0);
+                return plasmaData;
+            } catch (error) {
+                console.error('Error fetching plasma data:', error);
+                return [];
+            }
+        }
+        
+        async function fetchMagData() {
+            try {
+                const response = await fetch(CONFIG.noaaMagUrl);
+                const data = await response.json();
+                magData = data.slice(1).map(row => ({
+                    time: new Date(row[0]),
+                    bx: parseFloat(row[1]),
+                    by: parseFloat(row[2]),
+                    bz: parseFloat(row[3]),
+                    bt: parseFloat(row[6]),
+                })).filter(d => !isNaN(d.bt));
+                return magData;
+            } catch (error) {
+                console.error('Error fetching mag data:', error);
+                return [];
+            }
+        }
+        
+        async function fetchGoesData() {
+            try {
+                const [primaryRes, secondaryRes] = await Promise.all([
+                    fetch(goesUrls.primary),
+                    fetch(goesUrls.secondary),
+                ]);
+                
+                const primaryJson = await primaryRes.json();
+                const secondaryJson = await secondaryRes.json();
+                
+                goesPrimaryData = primaryJson.map(row => ({
+                    time: new Date(row.time_tag),
+                    Hp: parseFloat(row.Hp),
+                    He: parseFloat(row.He),
+                    Hn: parseFloat(row.Hn),
+                    total: parseFloat(row.total),
+                    satellite: goesUrls.primarySat,
+                })).filter(d => !isNaN(d.Hp));
+                
+                goesSecondaryData = secondaryJson.map(row => ({
+                    time: new Date(row.time_tag),
+                    Hp: parseFloat(row.Hp),
+                    He: parseFloat(row.He),
+                    Hn: parseFloat(row.Hn),
+                    total: parseFloat(row.total),
+                    satellite: goesUrls.secondarySat,
+                })).filter(d => !isNaN(d.Hp));
+                
+                return { primary: goesPrimaryData, secondary: goesSecondaryData };
+            } catch (error) {
+                console.error('Error fetching GOES data:', error);
+                return { primary: [], secondary: [] };
+            }
+        }
+        
+        async function fetchOurData() {
+            try {
+                const [sdoRes, swRes] = await Promise.allSettled([
+                    fetch(CONFIG.sdoMetadataUrl + '?t=' + Date.now()),
+                    fetch(CONFIG.spaceWeatherUrl + '?t=' + Date.now()),
+                ]);
+                
+                if (sdoRes.status === 'fulfilled' && sdoRes.value.ok) {
+                    const sdo = await sdoRes.value.json();
+                    document.getElementById('chCount').textContent = sdo.coronal_holes || '--';
+                    document.getElementById('arCount').textContent = sdo.active_regions || '--';
+                    document.getElementById('chValue').textContent = sdo.coronal_holes || '--';
+                    document.getElementById('arValue').textContent = sdo.active_regions || '--';
+                    
+                    if (sdo.timestamp) {
+                        document.getElementById('sdoUpdate').textContent = 
+                            'Updated: ' + new Date(sdo.timestamp).toLocaleTimeString();
+                    }
+                }
+                
+                if (swRes.status === 'fulfilled' && swRes.value.ok) {
+                    const sw = await swRes.value.json();
+                    updateAlerts(sw.detections || {});
+                }
+            } catch (error) {
+                console.error('Error fetching our data:', error);
+            }
+        }
+        
+        function filterByHours(data, hours) {
+            const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+            return data.filter(d => d.time >= cutoff);
+        }
+        
+        function updateConditions() {
+            if (plasmaData.length > 0) {
+                const latest = plasmaData[plasmaData.length - 1];
+                
+                const speedEl = document.getElementById('speedValue');
+                speedEl.textContent = latest.speed.toFixed(0);
+                speedEl.className = 'condition-value ' + 
+                    (latest.speed > 600 ? 'value-high' : latest.speed > 450 ? 'value-elevated' : 'value-normal');
+                
+                const densityEl = document.getElementById('densityValue');
+                densityEl.textContent = latest.density.toFixed(1);
+                densityEl.className = 'condition-value ' +
+                    (latest.density > 15 ? 'value-high' : latest.density > 8 ? 'value-elevated' : 'value-normal');
+            }
+            
+            if (magData.length > 0) {
+                const latest = magData[magData.length - 1];
+                
+                const btEl = document.getElementById('btValue');
+                btEl.textContent = latest.bt.toFixed(1);
+                btEl.className = 'condition-value ' +
+                    (latest.bt > 15 ? 'value-high' : latest.bt > 8 ? 'value-elevated' : 'value-normal');
+                
+                const bzEl = document.getElementById('bzValue');
+                bzEl.textContent = latest.bz.toFixed(1);
+                bzEl.className = 'condition-value ' +
+                    (latest.bz < -10 ? 'value-high' : latest.bz < -5 ? 'value-elevated' : 'value-normal');
+            }
+            
+            if (goesPrimaryData.length > 0) {
+                const latest = goesPrimaryData[goesPrimaryData.length - 1];
+                document.getElementById('hpValue').textContent = latest.Hp.toFixed(1);
+            }
+            
+            document.getElementById('lastUpdate').textContent = 
+                'Last updated: ' + new Date().toLocaleString();
+        }
+        
+        function updateAlerts(detections) {
+            const container = document.getElementById('alertsContainer');
+            const shocks = detections.ip_shocks || [];
+            const sscs = detections.ssc_events || [];
+            
+            if (shocks.length === 0 && sscs.length === 0) {
+                container.innerHTML = '<div class="no-alerts">No significant events detected recently</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            shocks.forEach(shock => {
+                html += `
+                    <div class="alert-item shock">
+                        <span class="alert-icon">⚡</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Interplanetary Shock Detected</div>
+                            <div class="alert-details">
+                                Time: ${shock.time || 'Unknown'} | 
+                                Speed jump: ${shock.speed_jump?.toFixed(0) || '--'} km/s
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            sscs.forEach(ssc => {
+                html += `
+                    <div class="alert-item">
+                        <span class="alert-icon">🌍</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Storm Sudden Commencement</div>
+                            <div class="alert-details">
+                                Time: ${ssc.time || 'Unknown'} | 
+                                Amplitude: ${ssc.amplitude?.toFixed(1) || '--'} nT
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function plotL1Chart() {
+            const filtered = {
+                plasma: filterByHours(plasmaData, l1Hours),
+                mag: filterByHours(magData, l1Hours),
+            };
+            
+            if (filtered.plasma.length === 0 && filtered.mag.length === 0) return;
+            
+            const traces = [
+                {
+                    name: 'Speed',
+                    x: filtered.plasma.map(d => d.time),
+                    y: filtered.plasma.map(d => d.speed),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#4a9eff', width: 1.5 },
+                    yaxis: 'y',
+                },
+                {
+                    name: 'Density',
+                    x: filtered.plasma.map(d => d.time),
+                    y: filtered.plasma.map(d => d.density),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#ffcc00', width: 1.5 },
+                    yaxis: 'y2',
+                },
+                {
+                    name: 'Bz',
+                    x: filtered.mag.map(d => d.time),
+                    y: filtered.mag.map(d => d.bz),
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    line: { color: '#00ff88', width: 1.5 },
+                    fillcolor: 'rgba(0, 255, 136, 0.15)',
+                    yaxis: 'y3',
+                },
+                {
+                    name: 'Bt',
+                    x: filtered.mag.map(d => d.time),
+                    y: filtered.mag.map(d => d.bt),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#ff6b6b', width: 1.5 },
+                    yaxis: 'y3',
+                },
+            ];
+            
+            const layout = {
+                ...darkLayout,
+                grid: { rows: 3, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
+                yaxis: { ...darkLayout.yaxis, title: { text: 'km/s', font: { size: 10 } }, domain: [0.72, 1], range: [250, 800] },
+                yaxis2: { ...darkLayout.yaxis, title: { text: 'p/cm³', font: { size: 10 } }, domain: [0.38, 0.66], range: [0, 30] },
+                yaxis3: { ...darkLayout.yaxis, title: { text: 'nT', font: { size: 10 } }, domain: [0, 0.32], range: [-20, 25] },
+                height: 350,
+            };
+            
+            Plotly.newPlot('l1Chart', traces, layout, plotConfig);
+        }
+        
+        function plotGoesChart() {
+            const filteredPrimary = filterByHours(goesPrimaryData, goesHours);
+            const filteredSecondary = filterByHours(goesSecondaryData, goesHours);
+            
+            if (filteredPrimary.length === 0 && filteredSecondary.length === 0) return;
+            
+            const traces = [];
+            const colors = {
+                Hp: { primary: '#ff69b4', secondary: '#ff69b4' },
+                He: { primary: '#87ceeb', secondary: '#87ceeb' },
+                Hn: { primary: '#98fb98', secondary: '#98fb98' },
+                total: { primary: '#ffd700', secondary: '#ffd700' },
+            };
+            
+            // Primary satellite traces
+            if (showComponents.Hp && filteredPrimary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.primarySat} Hp`,
+                    x: filteredPrimary.map(d => d.time),
+                    y: filteredPrimary.map(d => d.Hp),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.Hp.primary, width: 2 },
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(255, 105, 180, 0.15)',
+                });
+            }
+            
+            if (showComponents.He && filteredPrimary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.primarySat} He`,
+                    x: filteredPrimary.map(d => d.time),
+                    y: filteredPrimary.map(d => d.He),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.He.primary, width: 1.5 },
+                });
+            }
+            
+            if (showComponents.Hn && filteredPrimary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.primarySat} Hn`,
+                    x: filteredPrimary.map(d => d.time),
+                    y: filteredPrimary.map(d => d.Hn),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.Hn.primary, width: 1.5 },
+                });
+            }
+            
+            if (showComponents.total && filteredPrimary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.primarySat} Total`,
+                    x: filteredPrimary.map(d => d.time),
+                    y: filteredPrimary.map(d => d.total),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.total.primary, width: 1.5 },
+                });
+            }
+            
+            // Secondary satellite traces (dashed lines)
+            if (showComponents.Hp && filteredSecondary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.secondarySat} Hp`,
+                    x: filteredSecondary.map(d => d.time),
+                    y: filteredSecondary.map(d => d.Hp),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.Hp.secondary, width: 1.5, dash: 'dot' },
+                });
+            }
+            
+            if (showComponents.He && filteredSecondary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.secondarySat} He`,
+                    x: filteredSecondary.map(d => d.time),
+                    y: filteredSecondary.map(d => d.He),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.He.secondary, width: 1.5, dash: 'dot' },
+                });
+            }
+            
+            if (showComponents.Hn && filteredSecondary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.secondarySat} Hn`,
+                    x: filteredSecondary.map(d => d.time),
+                    y: filteredSecondary.map(d => d.Hn),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.Hn.secondary, width: 1.5, dash: 'dot' },
+                });
+            }
+            
+            if (showComponents.total && filteredSecondary.length > 0) {
+                traces.push({
+                    name: `G${goesUrls.secondarySat} Total`,
+                    x: filteredSecondary.map(d => d.time),
+                    y: filteredSecondary.map(d => d.total),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: colors.total.secondary, width: 1.5, dash: 'dot' },
+                });
+            }
+            
+            const layout = {
+                ...darkLayout,
+                yaxis: { ...darkLayout.yaxis, title: { text: 'nT', font: { size: 10 } }, range: [0, 150] },
+                height: 350,
+            };
+            
+            Plotly.newPlot('goesChart', traces, layout, plotConfig);
+        }
+        
+        function loadSdoImage() {
+            const img = document.getElementById('sdoImage');
+            img.src = CONFIG.sdoImageUrl + '?t=' + Date.now();
+        }
+        
+        // L1 Time selector
+        document.querySelectorAll('#l1TimeSelector .time-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('#l1TimeSelector .time-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                l1Hours = parseInt(this.dataset.hours);
+                plotL1Chart();
+            });
+        });
+        
+        // GOES Time selector
+        document.querySelectorAll('#goesTimeSelector .time-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('#goesTimeSelector .time-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                goesHours = parseInt(this.dataset.hours);
+                plotGoesChart();
+            });
+        });
+        
+        // Component toggles
+        document.getElementById('toggleHp').addEventListener('change', function() {
+            showComponents.Hp = this.checked;
+            plotGoesChart();
+        });
+        document.getElementById('toggleHe').addEventListener('change', function() {
+            showComponents.He = this.checked;
+            plotGoesChart();
+        });
+        document.getElementById('toggleHn').addEventListener('change', function() {
+            showComponents.Hn = this.checked;
+            plotGoesChart();
+        });
+        document.getElementById('toggleTotal').addEventListener('change', function() {
+            showComponents.total = this.checked;
+            plotGoesChart();
+        });
+        
+        // Initialize
+        async function initialize() {
+            // First get GOES instrument info
+            await fetchGoesInstruments();
+            
+            // Then fetch all data
+            await Promise.all([
+                fetchPlasmaData(),
+                fetchMagData(),
+                fetchGoesData(),
+                fetchOurData(),
+            ]);
+            
+            updateConditions();
+            plotL1Chart();
+            plotGoesChart();
+            loadSdoImage();
+        }
+        
+        function startAutoRefresh() {
+            setInterval(async () => {
+                await Promise.all([
+                    fetchPlasmaData(),
+                    fetchMagData(),
+                    fetchGoesData(),
+                    fetchOurData(),
+                ]);
+                updateConditions();
+                plotL1Chart();
+                plotGoesChart();
+            }, CONFIG.refreshInterval);
+            
+            // Refresh SDO image every 5 minutes
+            setInterval(loadSdoImage, 5 * 60 * 1000);
+        }
+        
+        initialize().then(startAutoRefresh);
+    </script>
+</body>
+</html>
